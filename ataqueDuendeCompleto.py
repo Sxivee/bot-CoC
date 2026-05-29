@@ -109,26 +109,65 @@ def realizar_un_ataque(numero_ataque, total_ataques):
     return True
 
 def iniciar_bot():
-    print("\n--- CONFIGURACIÓN DE RUTINA ---")
+    print("\n=============================================")
+    print("   ⚙️ CONFIGURACIÓN IA DE FARMEO ⚙️   ")
+    print("=============================================\n")
+    
     try:
-        num_ataques = int(input("¿Cuántas partidas seguidas quieres que haga el bot? : "))
+        num_ataques = int(input("[?] ¿Cuántas partidas seguidas quieres que intente el bot? : "))
+        
+        usar_ia = input("[?] ¿Activar IA para detener el bot si te llenas de recursos? (s/n): ").strip().lower()
+        
+        if usar_ia == 's':
+            print("\n[*] Establece los límites. (Escribe 0 si no quieres límite para un recurso en específico)")
+            limite_maximo_oro = int(input("[?] Límite para detener por ORO (Ej: 14000000): "))
+            limite_maximo_elixir = int(input("[?] Límite para detener por ELIXIR (Ej: 14000000): "))
+        else:
+            limite_maximo_oro = 0
+            limite_maximo_elixir = 0
+            
     except ValueError:
-        print("[-] Debes introducir un número entero. Cerrando programa.")
+        print("[-] Error: Debes introducir números enteros. Cerrando programa.")
         sys.exit()
 
-    print(f"\n[*] Entendido. El bot intentará realizar {num_ataques} ataques.")
+    print(f"\n[*] Guardando configuración... Objetivo: {num_ataques} ataques.")
     print("[*] Tienes 5 segundos para maximizar la ventana del juego y ponerte en la aldea...")
     time.sleep(5)
 
+    ataques_realizados = 0
+
     for i in range(1, num_ataques + 1):
-        realizar_un_ataque(i, num_ataques)
         
+        # ----------------------------------------------------
+        # Lógica de Inteligencia Artificial (Lectura de Recursos)
+        # ----------------------------------------------------
+        if limite_maximo_oro > 0 or limite_maximo_elixir > 0:
+            print(f"\n[*] IA escaneando la capacidad de los almacenes...")
+            
+            # Pasamos ambos límites a la función
+            debe_detenerse = vision_utils.comprobar_recursos_con_ia(
+                limite_oro=limite_maximo_oro, 
+                limite_elixir=limite_maximo_elixir
+            )
+            
+            if debe_detenerse:
+                print("\n[!!!] El bot se detiene automáticamente para no desperdiciar botín.")
+                break 
+            else:
+                print("[+] Límites no alcanzados. Continuando con el ataque...")
+
+        # Ejecuta la rutina de ataque clásica
+        exito = realizar_un_ataque(i, num_ataques)
+        
+        if exito:
+            ataques_realizados += 1
+        
+        # Pausa de seguridad entre partidas
         if i < num_ataques:
-            print(f"[*] Descanso de 3 segundos antes de iniciar la siguiente búsqueda...")
-            time.sleep(3)
+            print(f"[*] Descanso de 4 segundos antes de iniciar la siguiente búsqueda...")
+            time.sleep(4)
 
-    print("\n[+] Tarea finalizada. Se han completado todas las repeticiones.")
+    print(f"\n[+] Tarea finalizada. Se completaron {ataques_realizados} de {num_ataques} ataques planeados.")
 
-# Al importar el archivo desde botatacar.py, esto evita que se ejecute automáticamente
 if __name__ == "__main__":
     iniciar_bot()

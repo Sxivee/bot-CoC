@@ -2,6 +2,76 @@ import pyautogui
 import time
 import random
 from matplotlib.path import Path
+import numpy as np
+
+# Intentamos importar la IA. Si el usuario no la tiene instalada, el bot no colapsará de inmediato.
+try:
+    import easyocr
+    print("[*] Cargando modelo de Inteligencia Artificial (EasyOCR)...")
+    # gpu=False fuerza a usar el procesador. Si tienes una tarjeta gráfica NVIDIA y CUDA instalado, cámbialo a True para que sea instantáneo.
+    lector_ia = easyocr.Reader(['en'], gpu=False) 
+except ImportError:
+    lector_ia = None
+    print("[-] EasyOCR no está instalado. Las funciones de IA no estarán disponibles.")
+
+def comprobar_recursos_con_ia(limite_oro=0, limite_elixir=0):
+    """
+    Lee las zonas del oro y del elixir.
+    Devuelve True si ALGUNO de los dos recursos supera su límite establecido.
+    Si un límite es 0, significa que al usuario no le importa ese recurso y lo ignora.
+    """
+    if lector_ia is None:
+        print("[-] Error: EasyOCR no está inicializado.")
+        return False
+        
+    # [!] SUSTITUYE ESTAS TUPLAS POR TUS COORDENADAS CALIBRADAS [!]
+    zona_oro = (1607, 34, 223, 38) # <-- Pon aquí la nueva tupla que calcules   
+    zona_elixir = (1628, 118, 201, 35) # <-- Pon aquí la nueva tupla que calcules
+    
+    def leer_recurso(zona, nombre_recurso):
+        """Función interna para escanear y limpiar el texto de cualquier zona."""
+        captura = pyautogui.screenshot(region=zona)
+        imagen_array = np.array(captura)
+        resultados = lector_ia.readtext(imagen_array, detail=0, allowlist='0123456789.,')
+        
+        if resultados:
+            texto = resultados[0].replace('.', '').replace(',', '').strip()
+            try:
+                return int(texto)
+            except ValueError:
+                print(f"    [IA] Error de lectura visual en {nombre_recurso}: '{resultados[0]}'")
+        else:
+            print(f"    [IA] No se detectó texto en la zona de {nombre_recurso}.")
+        return -1 # Devuelve -1 si falla la lectura
+
+    
+    max_oro = False
+    max_elixir = False
+    detener_bot = False
+
+
+    # 1. Comprobar Oro (Solo si el usuario ha puesto un límite mayor a 0)
+    if limite_oro > 0:
+        oro_actual = leer_recurso(zona_oro, "Oro")
+        if oro_actual != -1:
+            print(f"    [IA] Oro detectado: {oro_actual}")
+            if oro_actual >= limite_oro:
+                print(f"    [!!!] Límite de ORO alcanzado ({oro_actual} >= {limite_oro}).")
+                max_oro = True
+
+    # 2. Comprobar Elixir (Solo si el usuario ha puesto un límite mayor a 0)
+    if limite_elixir > 0:
+        elixir_actual = leer_recurso(zona_elixir, "Elixir")
+        if elixir_actual != -1:
+            print(f"    [IA] Elixir detectado: {elixir_actual}")
+            if elixir_actual >= limite_elixir:
+                print(f"    [!!!] Límite de ELIXIR alcanzado ({elixir_actual} >= {limite_elixir}).")
+                max_elixir = True
+
+    if max_oro and max_elixir:
+        detener_bot = True
+
+    return detener_bot
 
 def esperar_y_clicar_imagen(ruta_imagen, confianza=0.8, timeout=10, retardo_post_clic=0.5):
     """Busca una imagen y hace clic si la encuentra antes de que acabe el timeout."""
